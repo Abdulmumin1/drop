@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import (QApplication, QFrame, QPushButton, QLabel, QVBoxLayout, QLineEdit,
                              QHBoxLayout, QMainWindow, QScrollArea, QCheckBox, QColorDialog, QFileDialog)
 from PyQt5.QtCore import Qt, QObject, QThread, pyqtSignal
+from PyQt5.QtGui import QPixmap
 from server import init_server, destroy_server, server, send_to_client, send_multiple
-from utils import scroll_hor, scroll_var, save_data, load_data
+from utils import scroll_hor, scroll_var, save_data, load_data, generateQRCode
 import json
 from client import thread, threading
+from flask_server import flask_Server
 cl_list = []
 recievers_list = []
 
@@ -34,6 +36,55 @@ class ClientHandler():
         self.client_addresses = {}
 
 
+class MobileQrFrame(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setMinimumHeight(300)
+        # self.setStyleSheet('')
+        self.file_ = None
+
+        main_layout = QVBoxLayout(self)
+        layout = QHBoxLayout()
+        self.qr_image = QLabel()
+        # layout.addWidget(self.qr_image)
+        # qr_image.setPixmap()
+        select_file_btn = QPushButton(text='select', clicked=self.select_files)
+        select_file_btn.setStyleSheet(
+            '')
+        layout.addWidget(select_file_btn, alignment=Qt.AlignCenter)
+
+        generateQRCode = QPushButton(
+            text='Generate QR', clicked=self.genereate_qr_code)
+        generateQRCode.setStyleSheet(
+            '')
+        layout.addWidget(generateQRCode, alignment=Qt.AlignCenter)
+
+        self.back_btn = QPushButton(
+            text='Back')
+        self.back_btn.setStyleSheet(
+            '')
+
+        layout.addWidget(self.back_btn, alignment=Qt.AlignCenter)
+        main_layout.addWidget(self.qr_image, alignment=Qt.AlignCenter)
+        main_layout.addLayout(layout)
+
+    def select_files(self):
+        file_names = QFileDialog.getOpenFileNames(
+            self.parent(), 'upload file')
+        if file_names[0]:
+            self.file_ = file_names[0][0]
+
+    def genereate_qr_code(self):
+        if not self.file_:
+            return
+        generateQRCode()
+        self.qr_image.setPixmap(QPixmap('qr.png'))
+        thread = threading.Thread(
+            target=flask_Server, args=(self.file_,))
+        thread.start()
+        print('thread-started')
+
+
 class sendersZone(QFrame):
     def __init__(self):
         super().__init__()
@@ -43,6 +94,18 @@ class sendersZone(QFrame):
         send_file_btn.setStyleSheet(
             '')
         layout.addWidget(send_file_btn, alignment=Qt.AlignCenter)
+
+        self.send_to_mobile_btn = QPushButton(
+            text='Mobile')
+        self.send_to_mobile_btn.setStyleSheet(
+            '')
+        layout.addWidget(self.send_to_mobile_btn, alignment=Qt.AlignCenter)
+
+        add_friend_btn = QPushButton(
+            text='Add Friend')
+        add_friend_btn.setStyleSheet(
+            '')
+        layout.addWidget(add_friend_btn, alignment=Qt.AlignCenter)
 
     def send_files(self):
         print('send files clicked')
@@ -199,14 +262,29 @@ class Main(QMainWindow):
 
         user_profile = UserProfile()
         self.dropzone = RecieversZone()
-        sender_zone = sendersZone()
-        # sender_zone.send_file_btn.connect(self.send_files)
+        self.sender_zone = sendersZone()
+        self.sender_zone.send_to_mobile_btn.clicked.connect(
+            self.hide_drop_and_sender)
+        self.mobile_zone = MobileQrFrame()
+        self.mobile_zone.hide()
+        self.mobile_zone.back_btn.clicked.connect(self.show_drop_and_sender)
         main_layout.addWidget(user_profile, alignment=Qt.AlignTop)
         main_layout.addWidget(self.dropzone)
-        main_layout.addWidget(sender_zone)
+        main_layout.addWidget(self.mobile_zone)
+        main_layout.addWidget(self.sender_zone)
 
         self.setCentralWidget(main_frame)
         thread.start()
+
+    def hide_drop_and_sender(self):
+        self.mobile_zone.show()
+        self.dropzone.hide()
+        self.sender_zone.hide()
+
+    def show_drop_and_sender(self):
+        self.dropzone.show()
+        self.sender_zone.show()
+        self.mobile_zone.hide()
 
     def create_threads(self):
         self.thread = QThread()
