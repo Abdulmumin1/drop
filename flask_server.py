@@ -5,6 +5,7 @@ from io import BytesIO
 from zipfile import ZipFile
 import os
 import re
+import threading
 
 
 def flask_Server(l):
@@ -16,6 +17,8 @@ def flask_Server(l):
     @app.route('/')
     def index():
         local_files = read_download_files()
+        # path_and_name = [map(lambda x:os.path.basename(x), local_files)]
+        # print(path_and_name)
         return render_template('index.html', sender=name, color=color, links=local_files)
 
     @app.route('/download')
@@ -36,29 +39,31 @@ def flask_Server(l):
     def download_single():
         if request.method != 'POST':
             return
-        file = request.form.get('f')
+
+        file = request.form.get('filepath')
+
+        print(request.form)
         return send_file(file, as_attachment=True)
 
     ip = get_devices()
     print(f'\n\n\n\n{ip}\n\n\n\n')
     if ip:
-        app.run(ip, debug=True)
+        app.run(ip)
     else:
-        app.run(debug=True)
+        app.run()
 
+# def fldask_Server(files):
 
-def fldask_Server(files):
+#     from flask import Flask, render_template, send_file
 
-    from flask import Flask, render_template, send_file
+#     app = Flask(__name__)
 
-    app = Flask(__name__)
-
-    @app.route('/')
-    def download_file():
-        if request.method != 'POST':
-            return
-        file = request.form.get('f')
-        return send_file(file, as_attachment=True)
+#     @app.route('/')
+#     def download_file():
+#         if request.method != 'POST':
+#             return
+#         file = request.form.get('f')
+#         return send_file(file, as_attachment=True)
 
 
 def get_devices():
@@ -77,5 +82,8 @@ def get_devices():
             return ip
 
 
-flask_Server('/home/famira/Music/kivyCalculator.mp4')
+server_thread = threading.Thread(target=flask_Server, args=('l'))
+
+if __name__ == '__main__':
+    flask_Server('/home/famira/Music/kivyCalculator.mp4')
 # print(get_devices())

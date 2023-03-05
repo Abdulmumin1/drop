@@ -1,5 +1,6 @@
 import json
 import qrcode
+import os
 # from flask_server import get_devices
 scroll_var = """QScrollBar::vertical{width:6px;}
         QScrollBar::handle:vertical{background:#333; min-height:0px;}
@@ -33,7 +34,10 @@ def create_download_files(files: list):
 
 def read_download_files():
     files = json.load(open('.send.json', 'r'))
-    return files['files']
+    file_list = files['files']
+    basename = list(map(lambda x: os.path.basename(x), file_list))
+    return_list = zip(file_list, basename)
+    return return_list
 
 
 def empty_download_files():
@@ -44,7 +48,7 @@ def generateQRCode(get_devices):
     name = 'qr.png'
     qr = qrcode.QRCode(version=2,
                        box_size=5,
-                       border=1)
+                       border=2)
     # Adding the data to be encoded to the QRCode object
     qr.add_data(f'http://{get_devices}:5000/')
     qr.make(fit=True)  # Making the entire QR Code space utilized
