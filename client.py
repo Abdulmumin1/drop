@@ -56,7 +56,7 @@ def handle():
         print('running')
 
 
-thread = threading.Thread(target=handle)
+client_thread = threading.Thread(target=handle)
 
 # def send_progress(total_size):
 #     client.send(bytes(total_size))
