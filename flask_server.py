@@ -1,17 +1,20 @@
 
 from flask import Flask, render_template, send_file, request
-from utils import load_data, read_download_files
+from utils import load_data, read_download_files, retrieve_files
 from io import BytesIO
 from zipfile import ZipFile
 import os
+import sys
 import re
 import threading
 
 
 def flask_Server(l):
     data = load_data()
-    name = data['name']
-    color = data['color']
+    name, color = 'username', 'orange'
+    if data:
+        name = data['name']
+        color = data['color']
     app = Flask(__name__)
 
     @app.route('/')
@@ -23,7 +26,7 @@ def flask_Server(l):
 
     @app.route('/download')
     def download_file():
-        local_files = read_download_files()
+        local_files = retrieve_files()
         if len(local_files) > 1:
             files = BytesIO()
             with ZipFile(files, 'w') as zf:
@@ -46,11 +49,12 @@ def flask_Server(l):
         return send_file(file, as_attachment=True)
 
     ip = get_devices()
-    print(f'\n\n\n\n{ip}\n\n\n\n')
+    # print(f'\n\n\n\n{ip}\n\n\n\n')
     if ip:
         app.run(ip)
     else:
         app.run()
+
 
 # def fldask_Server(files):
 
@@ -80,6 +84,10 @@ def get_devices():
     for ip in se:
         if ip.startswith('192.168'):
             return ip
+
+
+def kill_server():
+    sys.exit()
 
 
 server_thread = threading.Thread(target=flask_Server, args=('l'))

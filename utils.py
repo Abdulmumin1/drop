@@ -40,6 +40,12 @@ def read_download_files():
     return return_list
 
 
+def retrieve_files():
+    files = json.load(open('.send.json', 'r'))
+    file_list = files['files']
+    return file_list
+
+
 def empty_download_files():
     json.dump({'files': []}, open('.send.json', 'w'))
 

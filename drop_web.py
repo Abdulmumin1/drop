@@ -1,12 +1,12 @@
 from PyQt5.QtWidgets import (QApplication, QFrame, QPushButton, QLabel, QVBoxLayout, QLineEdit, QListWidget,
                              QHBoxLayout, QMainWindow, QScrollArea, QCheckBox, QColorDialog, QFileDialog)
 from PyQt5.QtCore import Qt, QObject, QThread, pyqtSignal
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIcon
 from server import init_server, destroy_server, server, send_to_client, send_multiple
 from utils import scroll_hor, scroll_var, save_data, load_data, generateQRCode, create_download_files, empty_download_files
 import json
-from client import client_thread, threading
-from flask_server import flask_Server, get_devices, server_thread
+# from client import client_thread, threading
+from flask_server import flask_Server, get_devices, server_thread, kill_server
 import os
 
 cl_list = []
@@ -22,15 +22,21 @@ class Worker(QObject):
 
     def __init__(self, parent=None):
         QObject.__init__(self, parent=parent)
+        # flask_Server('k')
         self.continue_run = True
 
-    def receive_msg(self):
-        while self.continue_run:
-            client, address = server.accept()
-            cl_list.append(client)
-            client.send('DATA'.encode())
-            name = client.recv(1024).decode()
-            self.client_data.emit(name)
+    def start_flask_server(self):
+        flask_Server('param')
+
+    # def receive_msg(self):
+
+    #     while self.continue_run:
+    #         print('greadt')
+    #         # client, address = server.accept()
+    #         # cl_list.append(client)
+    #         # client.send('DATA'.encode())
+    #         # name = client.recv(1024).decode()
+    #         # self.client_data.emit(name)
 
 
 class ClientHandler():
@@ -49,6 +55,7 @@ def make_button(text, clicked):
 class MobileQrFrame(QFrame):
     def __init__(self):
         super().__init__()
+        self.qr_showed = True
         # self.setMinimumHeight(300)
         # self.setStyleSheet('background:orange;')
         self.file_ = None
@@ -65,19 +72,20 @@ class MobileQrFrame(QFrame):
             scroll_var+scroll_hor+'QListWidget{border-radius:5px; padding:4px; border:1px solid '+f'{user_data["color"]}'+';}'+selected_color)
         # layout.addWidget(self.qr_image)
         # qr_image.setPixmap()
-        select_file_btn = make_button(text='select', clicked=self.select_files)
+        select_file_btn = make_button(
+            text='select files', clicked=self.select_files)
 
-        layout.addWidget(select_file_btn, alignment=Qt.AlignCenter)
+        layout.addWidget(select_file_btn)
 
-        generateQRCode = make_button(
-            text='Generate QR', clicked=self.genereate_qr_code)
+        # generateQRCode = make_button(
+        #     text='Generate QR', clicked=self.genereate_qr_code)
 
-        layout.addWidget(generateQRCode, alignment=Qt.AlignCenter)
+        # layout.addWidget(generateQRCode, alignment=Qt.AlignCenter)
 
         self.back_btn = make_button(
-            text='show selected', clicked=self.show_files)
+            text='files', clicked=self.show_files)
 
-        layout.addWidget(self.back_btn, alignment=Qt.AlignCenter)
+        layout.addWidget(self.back_btn)
         main_layout.addWidget(self.qr_image, alignment=Qt.AlignCenter)
         main_layout.addWidget(self.selected_files_listbox, Qt.AlignCenter)
         main_layout.addWidget(self.ip_label, alignment=Qt.AlignCenter)
@@ -98,24 +106,33 @@ class MobileQrFrame(QFrame):
             self.selected_files_listbox.addItems(names)
 
     def genereate_qr_code(self):
-        if not self.file_:
-            return
+        # if not self.file_:
+        #     return
         self.qr_image.show()
         self.selected_files_listbox.hide()
         ip = get_devices()
+        ip = ip if ip else '127.0.0.1'
         self.ip_label.setText(f'http://{ip}:5000')
-        generateQRCode(ip if ip else '127.0.0.1')
+        generateQRCode(ip)
         self.qr_image.setPixmap(QPixmap('qr.png'))
-        # self.sthread = threading.Thread(
+        # sthread = threading.Thread(
         #     target=flask_Server, args=(self.file_,))
-        # self.sthread.start()
-        server_thread.start()
+        # sthread.start()
+        # server_thread.start()
 
         print('thread-started')
 
     def show_files(self):
-        self.selected_files_listbox.show()
-        self.qr_image.hide()
+        if self.qr_showed:
+            self.selected_files_listbox.show()
+            self.qr_image.hide()
+            self.qr_showed = False
+            self.back_btn.setText('QR Code')
+            return
+        self.selected_files_listbox.hide()
+        self.qr_image.show()
+        self.qr_showed = True
+        self.back_btn.setText('Files')
 
 
 class sendersZone(QFrame):
@@ -192,7 +209,7 @@ class RecieversFrame(QFrame):
 class RecieversZone(QFrame):
     def __init__(self):
         super().__init__()
-        self.setMinimumHeight(90)
+        self.setMinimumHeight(80)
         layout = QVBoxLayout(self)
         label = QLabel('<h2>Available</h2>')
         label.setAlignment(Qt.AlignCenter)
@@ -288,6 +305,7 @@ class Main(QMainWindow):
         super().__init__()
         self.setFixedHeight(500)
         self.setFixedWidth(330)
+        self.setWindowIcon(QIcon('drop_icon.png'))
         # init_server()
         # self.create_threads()
         main_frame = QFrame()
@@ -301,13 +319,16 @@ class Main(QMainWindow):
         main_layout.addWidget(self.mobile_zone)
 
         self.setCentralWidget(main_frame)
-        # client_thread.start()
+        self.mobile_zone.genereate_qr_code()
+        self.create_threads()
+        # self.mobile_zone.genereate_qr_code()
 
     def create_threads(self):
         self.thread = QThread()
         self.worker = Worker()
         self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.receive_msg)
+        # self.thread.started.connect(self.worker.receive_msg)
+        self.thread.started.connect(self.worker.start_flask_server)
         self.worker.client_data.connect(self.add_connected)
         self.thread.start()
 
@@ -317,13 +338,9 @@ class Main(QMainWindow):
         print(data)
 
     def closeEvent(self, a0):
-        # self.thread.deleteLater()
-        # self.worker.deleteLater()
-        # print(self.size().width(), self.size().height())
-        # destroy_server()
-        # server_thread.join()
         empty_download_files()
-        # print('Closing')
+
+        kill_server()
 
 
 def run():
