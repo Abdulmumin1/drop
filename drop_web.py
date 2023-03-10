@@ -1,9 +1,11 @@
+
 from PyQt5.QtWidgets import (QApplication, QFrame, QPushButton, QLabel, QVBoxLayout, QLineEdit, QListWidget,
                              QHBoxLayout, QMainWindow, QScrollArea, QCheckBox, QColorDialog, QFileDialog)
-from PyQt5.QtCore import Qt, QObject, QThread, pyqtSignal
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtCore import Qt, QObject, QThread, pyqtSignal, pyqtProperty, QRect, QPropertyAnimation, QMimeData
+from PyQt5.QtGui import QPixmap, QIcon, QColor, QDrag
 from server import init_server, destroy_server, server, send_to_client, send_multiple
-from utils import scroll_hor, scroll_var, save_data, load_data, generateQRCode, create_download_files, empty_download_files
+from utils import (scroll_hor, scroll_var, save_data,
+                   load_data, generateQRCode, create_download_files, empty_download_files, return_file_basename)
 import json
 # from client import client_thread, threading
 from flask_server import flask_Server, get_devices, server_thread, kill_server
@@ -44,36 +46,128 @@ class ClientHandler():
         self.client_addresses = {}
 
 
-def make_button(text, clicked):
-    but = QPushButton(text, clicked=clicked)
+class PopButton(QPushButton):
+    def __init__(self, text, clicked, parent=None):
+        super(PopButton, self).__init__(parent)
+        self.setText(text)
+        self.clicked_function = clicked
+
+    def mousePressEvent(self, e):
+        self.animate()
+
+    def animate(self):
+        self.anim = QPropertyAnimation(self, b'color')
+        self.anim.setStartValue(QColor(255, 255, 255))
+        self.anim.setEndValue(QColor(0, 0, 0))
+        self.anim.setDuration(300)
+
+        # Scale up the button
+        self.anim2 = QPropertyAnimation(self, b'geometry')
+        self.anim2.setDuration(200)
+        self.anim2.setStartValue(
+            QRect(self.x(), self.y(), self.width(), self.height()))
+        self.anim2.setEndValue(QRect(self.x()-5, self.y()-5,
+                                     self.width()+10, self.height()+10))
+
+        # Scale down the button
+        self.anim3 = QPropertyAnimation(self, b'geometry')
+        self.anim3.setDuration(100)
+        self.anim3.setStartValue(QRect(self.x()-5, self.y()-5,
+                                       self.width()+10, self.height()+10))
+        self.anim3.setEndValue(
+            QRect(self.x(), self.y(), self.width(), self.height()))
+
+        self.anim.start()
+        self.anim2.start()
+        self.anim3.start()
+        self.anim3.finished.connect(self.clicked_function)
+
+    def getColor(self):
+        return self.palette().color(self.backgroundRole())
+
+    def setColor(self, color):
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), color)
+        self.setPalette(palette)
+
+    color = pyqtProperty(QColor, getColor, setColor)
+
+
+def make_button(text, clicked, parent):
+    but = PopButton(text, clicked=clicked, parent=parent)
     but.setStyleSheet(
         f'background:{user_data["color"]}; padding:6px; border:0; border-radius:3px;')
     but.setCursor(Qt.PointingHandCursor)
     return but
 
 
+class DropFrame(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setMinimumHeight(200)
+
+        self.setAcceptDrops(True)
+        self.label = QLabel('<h2>Files</h2>\n<em>Drop files here</em>')
+        self.listbox = QListWidget()
+        selected_color = 'QListWidget::item:selected{background:' + \
+            f'{user_data["color"]};'+'border:0; padding:3px;}'
+        self.listbox.setStyleSheet(
+            scroll_var+scroll_hor+'QListWidget{border-radius:5px; padding:4px; border:1px solid '+f'{user_data["color"]}'+';}'+selected_color)
+
+        self.file_frame = QFrame()
+        self.file_frame_layout = QVBoxLayout(self.file_frame)
+        scroll_area = QScrollArea()
+        scroll_area.setStyleSheet(
+            "QScrollArea{border:0px;}"+scroll_hor+scroll_var)
+        scroll_area.setWidgetResizable(True)
+
+        # scroll_area.horizontalScrollBar().setDisabled(True)
+        scroll_area.setWidget(self.file_frame)
+
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.addWidget(self.label)
+        self.main_layout.addWidget(scroll_area)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        l = []
+        for url in event.mimeData().urls():
+            l.append(url.toLocalFile())
+        create_download_files(l)
+        self.addItems(return_file_basename(l))
+
+    def addItems(self, items):
+        for i in items:
+            self.file_frame_layout.addWidget(self.file_label(i))
+
+    def file_label(self, txt):
+        label = QLabel(txt)
+        label.setStyleSheet('padding:4px; font-size:9px;')
+        return label
+
+
 class MobileQrFrame(QFrame):
     def __init__(self):
         super().__init__()
+
         self.qr_showed = True
         # self.setMinimumHeight(300)
         # self.setStyleSheet('background:orange;')
         self.file_ = None
-
+        self.selected_files_listbox = DropFrame()
         main_layout = QVBoxLayout(self)
         layout = QHBoxLayout()
         self.qr_image = QLabel()
         self.qr_image.hide()
         self.ip_label = QLabel()
-        self.selected_files_listbox = QListWidget()
-        selected_color = 'QListWidget::item:selected{background:' + \
-            f'{user_data["color"]};'+'border:0; padding:3px;}'
-        self.selected_files_listbox.setStyleSheet(
-            scroll_var+scroll_hor+'QListWidget{border-radius:5px; padding:4px; border:1px solid '+f'{user_data["color"]}'+';}'+selected_color)
+
         # layout.addWidget(self.qr_image)
         # qr_image.setPixmap()
         select_file_btn = make_button(
-            text='select files', clicked=self.select_files)
+            text='select files', clicked=self.select_files, parent=self)
 
         layout.addWidget(select_file_btn)
 
@@ -83,7 +177,7 @@ class MobileQrFrame(QFrame):
         # layout.addWidget(generateQRCode, alignment=Qt.AlignCenter)
 
         self.back_btn = make_button(
-            text='files', clicked=self.show_files)
+            text='files', clicked=self.show_files, parent=self)
 
         layout.addWidget(self.back_btn)
         main_layout.addWidget(self.qr_image, alignment=Qt.AlignCenter)
@@ -102,8 +196,9 @@ class MobileQrFrame(QFrame):
                 pass
             create_download_files(file_names[0])
             self.file_ = True
-            names = list(map(lambda x: os.path.basename(x), file_names[0]))
-            self.selected_files_listbox.addItems(names)
+
+            self.selected_files_listbox.addItems(
+                return_file_basename(file_names[0]))
 
     def genereate_qr_code(self):
         # if not self.file_:
@@ -133,6 +228,9 @@ class MobileQrFrame(QFrame):
         self.qr_image.show()
         self.qr_showed = True
         self.back_btn.setText('Files')
+
+    def animate(self):
+        self.animation.start()
 
 
 class sendersZone(QFrame):
@@ -209,7 +307,7 @@ class RecieversFrame(QFrame):
 class RecieversZone(QFrame):
     def __init__(self):
         super().__init__()
-        self.setMinimumHeight(80)
+        self.setMinimumHeight(20)
         layout = QVBoxLayout(self)
         label = QLabel('<h2>Available</h2>')
         label.setAlignment(Qt.AlignCenter)
@@ -305,6 +403,7 @@ class Main(QMainWindow):
         super().__init__()
         self.setFixedHeight(500)
         self.setFixedWidth(330)
+
         self.setWindowIcon(QIcon('drop_icon.png'))
         # init_server()
         # self.create_threads()
@@ -320,8 +419,12 @@ class Main(QMainWindow):
 
         self.setCentralWidget(main_frame)
         self.mobile_zone.genereate_qr_code()
-        self.create_threads()
+        self.showEvent = self.startup_events
+
         # self.mobile_zone.genereate_qr_code()
+
+    def startup_events(self, e):
+        self.create_threads()
 
     def create_threads(self):
         self.thread = QThread()

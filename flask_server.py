@@ -20,9 +20,10 @@ def flask_Server(l):
     @app.route('/')
     def index():
         local_files = read_download_files()
+        l = retrieve_files()
         # path_and_name = [map(lambda x:os.path.basename(x), local_files)]
         # print(path_and_name)
-        return render_template('index.html', sender=name, color=color, links=local_files)
+        return render_template('index.html', sender=name, color=color, links=local_files, l=l)
 
     @app.route('/download')
     def download_file():

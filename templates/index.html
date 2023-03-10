@@ -7,9 +7,6 @@
     <title>Drop</title>
     <style>
       body {
-        /* height: 100vh;
-        display: grid;
-        place-items: center; */
         width: 100vw;
         display: flex;
         flex-direction: row;
@@ -18,29 +15,27 @@
       .center {
         text-align: center;
         width: 80%;
-
       }
       .icon {
         width: 100px;
         height: 100px;
-        margin:auto;
+        margin: auto;
         border-radius: 50%;
-        background: {{color}};
-
+        background: "{{color}}";
       }
-      .link{
+      .link {
         border: none;
         padding: 10px;
         margin: 5px;
         border-radius: 3px;
-        background: {{color}};
+        background: "{{color}}";
       }
-      .download{
-        background: {{color}};
-        border:none;
-        padding:8px;
-        margin:2px;
-        border-radius:4px;
+      .download {
+        background: "{{color}}";
+        border: none;
+        padding: 8px;
+        margin: 2px;
+        border-radius: 4px;
       }
     </style>
   </head>
@@ -51,10 +46,11 @@
       <h3>{{sender}}</h3>
       <p>Thank you for using drop!</p>
 
-      <button class="link">
-        <a style="text-decoration: none" href="{{url_for('download_file')}}"
+      <button class="link" onclick="sendPostRequests('/d',{{l}})">
+        Download All
+        <!-- <a style="text-decoration: none" href="{{url_for('download_file')}}"
           >Download All</a
-        >
+        > -->
       </button>
       <div
         style="
@@ -101,12 +97,31 @@
   </body>
 
   <script>
-    function clickAllLinks() {
-      // get all links in the document
-      const links = document.querySelectorAll("input");
-      console.log(links);
-      // iterate over the links and click each one
-      window.location.href("/download");
-    }
+    const postData = async (url, data) => {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      return response;
+    };
+
+    // const urls = ;
+    // const data = { message: "hello" };
+
+    const sendPostRequests = async (url, dataf) => {
+      // console.log("${data}");
+      let data = dataf;
+      for (let i = 0; i < data.length; i++) {
+        let file = { filepath: data[i] };
+        console.log(file);
+        await postData(url, file);
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // wait 1 second between requests
+      }
+    };
+
+    // sendPostRequests();
   </script>
 </html>
