@@ -145,7 +145,7 @@ class DropFrame(QFrame):
 
     def file_label(self, txt):
         label = QLabel(txt)
-        label.setStyleSheet('padding:4px; font-size:9px;')
+        label.setStyleSheet('padding:4px; font-size:11px;')
         return label
 
 

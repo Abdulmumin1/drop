@@ -21,17 +21,17 @@
         height: 100px;
         margin: auto;
         border-radius: 50%;
-        background: "{{color}}";
+        background: {{color}};
       }
       .link {
         border: none;
         padding: 10px;
         margin: 5px;
         border-radius: 3px;
-        background: "{{color}}";
+        background: {{color}};
       }
       .download {
-        background: "{{color}}";
+        background: {{color}};
         border: none;
         padding: 8px;
         margin: 2px;
@@ -46,7 +46,11 @@
       <h3>{{sender}}</h3>
       <p>Thank you for using drop!</p>
 
-      <button class="link" onclick="sendPostRequests('/d',{{l}})">
+      <button
+        class="link"
+        onclick="sendPostRequests('/d',{{l}})"
+        disabled="true"
+      >
         Download All
         <!-- <a style="text-decoration: none" href="{{url_for('download_file')}}"
           >Download All</a
@@ -80,20 +84,30 @@
                 display: flex;
                 justify-content: space-between;
                 background: white;
-                box-shadow: 1px 1px 1px 1px #333;
+
                 padding: 6px;
                 border-radius: 4px;
               "
             >
-              <p style="width: 100px; text-align: left">{{link[1]}}</p>
-              <input class="download" type="submit" value="download" />
+              <p
+                style="
+                  font-size: clamp(8px, 2.5vw, 16px);
+                  max-width: 70%;
+                  text-align: left;
+                  overflow: hidden;
+                "
+              >
+                {{link[1]}}
+              </p>
+              <div>
+                <input class="download" type="submit" value="download" />
+              </div>
             </div>
           </div>
         </form>
         {% endfor %}
       </div>
     </div>
-    <div></div>
   </body>
 
   <script>
@@ -112,11 +126,9 @@
     // const data = { message: "hello" };
 
     const sendPostRequests = async (url, dataf) => {
-      // console.log("${data}");
       let data = dataf;
       for (let i = 0; i < data.length; i++) {
         let file = { filepath: data[i] };
-        console.log(file);
         await postData(url, file);
         await new Promise((resolve) => setTimeout(resolve, 2000)); // wait 1 second between requests
       }
