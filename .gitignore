@@ -127,3 +127,15 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.config.json
+.send.json
+clienttest.py
+dialog.png
+esa.py
+ip.txt
+qr.png
+qrimage.png
+qrtest.py
+rc.py
+short.py
+sn.py
