@@ -112,13 +112,13 @@ class DropFrame(QFrame):
         selected_color = 'QListWidget::item:selected{background:' + \
             f'{user_data["color"]};'+'border:0; padding:3px;}'
         self.listbox.setStyleSheet(
-            scroll_var+scroll_hor+'QListWidget{border-radius:5px; padding:4px; border:1px solid '+f'{user_data["color"]}'+';}'+selected_color)
+            scroll_var+scroll_hor+'QListWidget{border-radius:2px; padding:2px; border:10px solid '+f'{user_data["color"]}'+';}'+selected_color)
 
         self.file_frame = QFrame()
         self.file_frame_layout = QVBoxLayout(self.file_frame)
         scroll_area = QScrollArea()
         scroll_area.setStyleSheet(
-            "QScrollArea{border:0px;}"+scroll_hor+scroll_var)
+            "QScrollArea{border:1.5px solid "+user_data['color']+"; border-radius:4px;}"+scroll_hor+scroll_var)
         scroll_area.setWidgetResizable(True)
 
         # scroll_area.horizontalScrollBar().setDisabled(True)
@@ -153,7 +153,7 @@ class MobileQrFrame(QFrame):
     def __init__(self):
         super().__init__()
 
-        self.qr_showed = True
+        self.qr_showed = False
         # self.setMinimumHeight(300)
         # self.setStyleSheet('background:orange;')
         self.file_ = None
@@ -177,9 +177,10 @@ class MobileQrFrame(QFrame):
         # layout.addWidget(generateQRCode, alignment=Qt.AlignCenter)
 
         self.back_btn = make_button(
-            text='files', clicked=self.show_files, parent=self)
+            text='Show QRCode', clicked=self.show_files, parent=self)
 
         layout.addWidget(self.back_btn)
+        main_layout.addStretch()
         main_layout.addWidget(self.qr_image, alignment=Qt.AlignCenter)
         main_layout.addWidget(self.selected_files_listbox, Qt.AlignCenter)
         main_layout.addWidget(self.ip_label, alignment=Qt.AlignCenter)
@@ -203,8 +204,8 @@ class MobileQrFrame(QFrame):
     def genereate_qr_code(self):
         # if not self.file_:
         #     return
-        self.qr_image.show()
-        self.selected_files_listbox.hide()
+        # self.qr_image.show()
+        self.selected_files_listbox.show()
         ip = get_devices()
         ip = ip if ip else '127.0.0.1'
         self.ip_label.setText(f'http://{ip}:5000')
@@ -222,7 +223,7 @@ class MobileQrFrame(QFrame):
             self.selected_files_listbox.show()
             self.qr_image.hide()
             self.qr_showed = False
-            self.back_btn.setText('QR Code')
+            self.back_btn.setText('Show QRCode')
             return
         self.selected_files_listbox.hide()
         self.qr_image.show()
@@ -412,6 +413,7 @@ class Main(QMainWindow):
 
         user_profile = UserProfile()
         self.dropzone = RecieversZone()
+        self.dropzone.hide()
         self.mobile_zone = MobileQrFrame()
         main_layout.addWidget(user_profile, alignment=Qt.AlignTop)
         main_layout.addWidget(self.dropzone)
