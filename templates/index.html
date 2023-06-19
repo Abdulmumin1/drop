@@ -15,6 +15,10 @@
       .center {
         text-align: center;
         width: 80%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
       }
       .icon {
         width: 100px;
@@ -67,6 +71,7 @@
           justify-content: center;
           gap: 10px;
           flex-direction: column;
+          width: 500px;
         "
       >
         {% for link in links %}
@@ -100,7 +105,12 @@
                 {{link[1]}}
               </p>
               <div>
-                <input class="download" type="submit" value="download" />
+                <input
+                  class="download"
+                  type="submit"
+                  value="download"
+                  onclick="clicked(this)"
+                />
               </div>
             </div>
           </div>
@@ -135,5 +145,10 @@
     };
 
     // sendPostRequests();
+    const clicked = (event) => {
+      event.style.background = "gray";
+      console.log(event);
+      console.log("download-started");
+    };
   </script>
 </html>
