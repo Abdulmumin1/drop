@@ -1,7 +1,7 @@
 
 from PyQt5.QtWidgets import (QApplication, QFrame, QPushButton, QLabel, QVBoxLayout, QLineEdit, QListWidget,
                              QHBoxLayout, QMainWindow, QScrollArea, QCheckBox, QColorDialog, QFileDialog)
-from PyQt5.QtCore import Qt, QObject, QThread, pyqtSignal, pyqtProperty, QRect, QPropertyAnimation, QMimeData
+from PyQt5.QtCore import Qt, QObject, QThread, pyqtSignal, pyqtProperty, QRect, QPropertyAnimation, QMimeData, QTimer
 from PyQt5.QtGui import QPixmap, QIcon, QColor, QDrag
 from server import init_server, destroy_server, server, send_to_client, send_multiple
 from utils import (scroll_hor, scroll_var, save_data,
@@ -421,12 +421,18 @@ class Main(QMainWindow):
 
         self.setCentralWidget(main_frame)
         self.mobile_zone.genereate_qr_code()
-        self.showEvent = self.startup_events
+        # self.showEvent = self.startup_events
+
+        self.timer = QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.startup_events)
+        self.timer.start(1000)
 
         # self.mobile_zone.genereate_qr_code()
 
-    def startup_events(self, e):
+    def startup_events(self):
         self.create_threads()
+        # print('Hello ')
 
     def create_threads(self):
         self.thread = QThread()
@@ -437,14 +443,18 @@ class Main(QMainWindow):
         self.worker.client_data.connect(self.add_connected)
         self.thread.start()
 
+    def destroy_thread(self):
+        self.worker.deleteLater()
+        self.thread.deleteLater()
+
     def add_connected(self, data):
         new = RecieversFrame(data)
         self.dropzone.r_layout.insertWidget(0, new)
         print(data)
 
     def closeEvent(self, a0):
+        self.destroy_thread()
         empty_download_files()
-
         kill_server()
 
 
