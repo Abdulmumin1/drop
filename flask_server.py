@@ -1,8 +1,8 @@
-
 from flask import Flask, render_template, send_file, request
 from utils import load_data, read_download_files, retrieve_files
 from io import BytesIO
 from zipfile import ZipFile
+import socket
 import os
 import sys
 import re
@@ -73,18 +73,17 @@ def flask_Server(l):
 
 def get_devices():
 
-    ip_address_regex = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+  
+    try:
+        # The following line creates a socket, connects to a remote server, and then gets the local IP address
+        # that was used by the kernel to make that connection. It does not actually send any data to the remote server.
+        local_ip = [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]
+    except Exception:
+        local_ip = '127.0.0.1'
+    return local_ip
 
-    devices = os.system('ip addr > ip.txt')
-    with open('ip.txt', 'r') as f:
-        content = f.read()
-        # print('\n\n\n\n\n fdklafkdafjkdajkfdakfda', content)
+print(get_local_ip())
 
-        se = re.findall(ip_address_regex, content)
-
-    for ip in se:
-        if ip.startswith('192.168'):
-            return ip
 
 
 def kill_server():
