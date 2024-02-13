@@ -89,27 +89,17 @@ def flask_Server(l):
 
 
 def get_devices():
-    local_ips = []
-    for interface, addrs in psutil.net_if_addrs().items():
-        for addr in addrs:
-            if addr.family == psutil.AF_INET:
-                if addr.address.startswith('192.168'):
-                    local_ips.append(addr.address)
-    return local_ips
+    # The following line creates a socket, connects to a remote server, and then gets the local IP address
+    # that was used by the kernel to make that connection. It does not actually send any data to the remote server
+    try:
+        local_ip = [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
+                    for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]
+    except Exception:
+        local_ip = '127.0.0.1'
+    return local_ip
 
 
-# Example usage
 print(get_devices())
-# def get_devices():
-#     local_ips = []
-#     ip_address_regex = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-
-#
-# ls
-
-
-# Example usage
-# print(get_devices())
 
 
 def kill_server():
